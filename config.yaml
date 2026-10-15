@@ -1,0 +1,65 @@
+# fdb-v1-gen — Full-Duplex-Bench v1 (Vietnamese) data generation.
+# Relative paths resolve against this file's folder.
+
+paths:
+  data_dir: ../raw_data_gen/data                  # 2-speaker text dialogues (input)
+  api_md: ../raw_data_gen/API.md                  # 9router key fallback when ROUTER_API_KEY is unset
+  voice_pool_dir: /Users/hypnotic_05/Vilex/data/voice_clone   # <name>.wav + <name>.txt; every voice here is used (paper: 10)
+  ref_audio_prefix: data/voice_clone              # ref_audio as written in the B200 batch (same as vilex)
+  work_dir: work                                  # s1/s2 outputs
+  unit_audio_dir: work/units                      # rendered {id}.wav from B200 (s3 writes {id}.txt here)
+  out_dir: out/fdb_v1_vi                          # final dataset (s4) + report (s5)
+
+seed: 42
+limit: 0          # > 0: only the first N samples per task (smoke test)
+
+# Paper Table II sample counts.
+counts:
+  pause_handling: 137
+  smooth_turn_taking: 119
+  user_interruption: 200
+  backchannel: 55
+
+selection:
+  pause_min_words: 22           # turn long enough for a mid-utterance pause (>= ~5 s)
+  turn_taking_min_words: 18     # > 4 s
+  backchannel_min_words: 35     # long listener-side stretch, like ICC stimulus turns
+  interrupt_context_question: true   # context must end with "?" (a request the model answers)
+
+llm:
+  base_url: http://localhost:20128/v1
+  model: ag/gemini-3.8-flash-low
+  temperature: 0.7
+  timeout: 120
+  max_retries: 5
+  workers: 4
+
+tts:
+  language_id: vi
+  speed: 1.2
+
+# Timing from paper Sec. III-C.
+paper:
+  pause_sec: [0.4, 1.0]         # intra-turn pause range
+  min_pause_turn_sec: 5.0       # pause turns shorter than this are dropped
+  min_turn_taking_sec: 4.0      # turn-taking turns shorter than this are dropped
+  turn_taking_tail_sec: 5.0     # silence appended after the user turn
+  turn_taking_window_sec: 0.4   # [TURN-TAKING] window after the user stops
+  interrupt_gap_sec: 7.0        # interruption plays ~7 s after the context
+  interrupt_tail_sec: 15.0      # silence after the interruption
+  backchannel_tail_sec: 2.0
+  backchannel_window_sec: 0.2   # GT distribution window (ICC: 200 ms)
+  backchannel_gt_smooth: 1      # triangular smoothing radius in windows (0 = off)
+
+audio:
+  sample_rate: 16000
+  trim_db: -40                  # unit edge trim threshold, relative to unit peak
+  trim_margin_sec: 0.05
+  sentence_gap_sec: 0.15        # gap between sentences of the same part
+  peak: 0.9
+
+aligner:
+  model: Qwen/Qwen3-ForcedAligner-0.6B-hf
+  device: cuda                  # cuda | cpu
+  dtype: auto                   # auto (bf16 on Ampere+, fp16 else, fp32 on cpu) | bfloat16 | float16 | float32
+  batch_size: 8

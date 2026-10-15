@@ -1,0 +1,8 @@
+numpy
+soundfile
+scipy
+pyyaml
+requests
+# s3_align.py only
+torch
+transformers>=5.0
